@@ -510,13 +510,6 @@ void execOuterCmd(SimpleCmd *cmd){
             
             justArgs(cmd->args[0]);
 
-printf("test\n");
-printf("%s\n",cmdBuff);
-for(i = 0; cmd->args[i] != NULL; i++){
-    		printf("args[%d]: %s\n",i,cmd->args[i]);
-	}
-printf("args[%d]: %s\n",i,cmd->args[i]);
-
             if(execv(cmdBuff, cmd->args) < 0){ //执行命令
                 printf("execv failed!\n");
                 return;
@@ -617,7 +610,7 @@ void execSimpleCmd(SimpleCmd *cmd){
 ********************************************************/
 int findWildcard (SimpleCmd *cmd) {
 	int i,j;
-	char *temp = (char*)malloc(sizeof(char));
+	char *temp = (char*)malloc(sizeof(char)*256);
 	for (i = 0; cmd->args[i] != NULL ;i++) {
 		temp = cmd->args[i];
 		for (j = 0; temp[j]!='\0'; j++) {
@@ -635,7 +628,7 @@ int findWildcard (SimpleCmd *cmd) {
 int matches(char *str1, char *pattern) {
 	int len1 = strlen(str1);
 	int len2 = strlen(pattern);
-	int mark = 0;
+	int mark = -1;
     int p1 = 0, p2 = 0;
     while (p1<len1 && p2<len2) {
 		if (pattern[p2] == '?') {
@@ -653,9 +646,12 @@ int matches(char *str1, char *pattern) {
 				return 0;
 			}
 			else {
+				if (mark!=-1) {
 				p1 -= p2 - mark - 1;
 				p2 = mark;
 				continue;
+				}
+				else return 0;
 			}
 		}
 		else {
@@ -670,6 +666,7 @@ int matches(char *str1, char *pattern) {
 		else if (pattern[p2 - 1] == '*') {
 			return 1;
 		}
+		else return 0;
 	}
     while (p2<len2) {
         if (pattern[p2] != '*')
@@ -685,20 +682,40 @@ int matches(char *str1, char *pattern) {
 void execComplexCmd(SimpleCmd *cmd, int b){
 	DIR *dp;
         struct dirent *dirp;
-	char *cmdtemp;
+	SimpleCmd *cmdtemp;
 	int i;
-	char *name = (char*)malloc(sizeof(char));
+	char *name = (char*)malloc(sizeof(get_current_dir_name()));
 	name = get_current_dir_name();
 	dp = opendir(name);
-	dirp = readdir(dp); 
-	cmdtemp = (char*)malloc(sizeof(char));
-	cmdtemp = cmd->args[b];
-	while(dirp!= NULL) {
-		if (matches(dirp->d_name, cmdtemp) == 1) {
-			cmd->args[b]=dirp->d_name;
-			execSimpleCmd(cmd);
+	while((dirp = readdir(dp)) != NULL) {
+		if (matches(dirp->d_name, cmd->args[b]) == 1) {
+			if (dirp->d_name =="." ||dirp->d_name == ".." || dirp->d_name[0]=='.')
+				continue;
+			cmdtemp = (SimpleCmd*)malloc(sizeof(SimpleCmd));
+			cmdtemp->args = (char**)malloc(sizeof(cmd->args));
+
+        		cmdtemp->input = (char*)malloc(sizeof( cmd->input));
+        		cmdtemp->output = (char*)malloc(sizeof( cmd->output));		
+
+		for (i = 0; cmd->args[i] != NULL ;i++) {
+			cmdtemp->args[i] = (char*)malloc(sizeof(cmd->args[i]));   
+			strcpy(cmdtemp->args[i],cmd->args[i]);
 		}
-		dirp = readdir(dp); 
+		cmdtemp->args[i] = (char*)malloc(sizeof(cmd->args[i]));   
+		cmdtemp->args[i] = NULL;
+
+		strcpy(cmdtemp->args[b],dirp->d_name);
+		if (cmd->input!=NULL)
+			strcpy(cmdtemp->input,cmd->input);
+		else cmdtemp->input=NULL;
+		if (cmd->output!=NULL)
+			strcpy(cmdtemp->output,cmd->output);
+		else cmdtemp->output=NULL;
+
+		cmdtemp->isBack = cmd->isBack;
+
+		execSimpleCmd(cmdtemp);
+		} 
 	}
 	closedir(dp);
 }
