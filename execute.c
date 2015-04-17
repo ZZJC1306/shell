@@ -618,6 +618,78 @@ void execSimpleCmd(SimpleCmd *cmd){
     }
 }
 
+//执行管道命令
+
+
+int pipe_cmd (SimpleCmd *cmd1,SimpleCmd *cmd2)
+{
+    int status;
+    int pid[2];
+    int pipe_fd[2];
+
+    
+    //建立管道
+    if(pipe(pipe_fd) < 0)
+    {
+        perror("pipe failed");
+        return -1;
+    }
+
+    //为cmd1命令创建进程
+    if((pid[0] = fork()) < 0)
+    {
+        perror("Fork failed");
+        return -1;
+    }
+
+    if(!pid[0])
+    {
+        //，关闭输入，将管道的写描述符赋值给标准输出，然后关闭
+        close(pipe_fd[0]);
+        dup2(pipe_fd[1],1);
+        close(pipe_fd[1]);
+        //执行命令
+        execSimpleCmd(cmd1);
+        exit(0);
+    }
+
+    if(pid[0])
+    {
+        //父进程
+        //为命令cmd2创建子进程
+        if((pid[1] = fork()) < 0)
+        {
+            perror("Fork failed");
+            return -1;
+        }
+        if(!pid[1])
+        {
+            //在子进程
+            //关闭输出，将管道的读描述复制给标准输入
+            close(pipe_fd[1]);
+            dup2(pipe_fd[0],0);
+            close(pipe_fd[0]);
+
+            if(cmd2->nextCmd!=NULL){
+                if(pipe_cmd(cmd2,cmd2->nextCmd))
+                    printf("pipe error\n");
+                free(cmd2->nextCmd);
+            }
+            else{
+                execSimpleCmd(cmd2);
+            }
+            exit(0);
+
+        }
+
+        //父进程
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+        waitpid(pid[1], &status, 0);
+    }
+    return 0;
+}
+
 /*******************************************************
                      命令执行接口
 ********************************************************/
