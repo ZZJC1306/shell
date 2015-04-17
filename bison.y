@@ -42,70 +42,28 @@ args            :   /* empty */
 %%
 
 /****************************************************************
-                  ´Ê·¨·ÖÎöº¯Êı
-****************************************************************/
-int yylex(){
-    //Õâ¸öº¯ÊıÓÃÀ´¼ì²éinputBuffÊÇ·ñÂú×ãlexµÄ¶¨Òå£¬Êµ¼ÊÉÏ²¢²»½øĞĞÈÎºÎ²Ù×÷£¬³õÆÚ¿ÉÂÔ¹ı²»¿´
-    int flag;
-    char c;
-    
-	//Ìø¹ı¿Õ¸ñµÈÎŞÓÃĞÅÏ¢
-    while(offset < len && (inputBuff[offset] == ' ' || inputBuff[offset] == '\t')){ 
-        offset++;
-    }
-    
-    flag = 0;
-    while(offset < len){ //Ñ­»·½øĞĞ´Ê·¨·ÖÎö£¬·µ»ØÖÕ½á·û
-        c = inputBuff[offset];
-        
-        if(c == ' ' || c == '\t'){
-            offset++;
-            return STRING;
-        }
-        
-        if(c == '<' || c == '>' || c == '&'){
-            if(flag == 1){
-                flag = 0;
-                return STRING;
-            }
-            offset++;
-            return c;
-        }
-        
-        flag = 1;
-        offset++;
-    }
-    
-    if(flag == 1){
-        return STRING;
-    }else{
-        return 0;
-    }
-}
-
-/****************************************************************
-                  ´íÎóĞÅÏ¢Ö´ĞĞº¯Êı
+                  é”™è¯¯ä¿¡æ¯æ‰§è¡Œå‡½æ•°
 ****************************************************************/
 void yyerror()
 {
-    printf("ÄãÊäÈëµÄÃüÁî²»ÕıÈ·£¬ÇëÖØĞÂÊäÈë£¡\n");
+    printf("ä½ è¾“å…¥çš„å‘½ä»¤ä¸æ­£ç¡®ï¼Œè¯·é‡æ–°è¾“å…¥ï¼\n");
 }
 
 /****************************************************************
-                  mainÖ÷º¯Êı
+                  mainä¸»å‡½æ•°
 ****************************************************************/
 int main(int argc, char** argv) {
     int i;
     char c;
 
-    init(); //³õÊ¼»¯»·¾³
+    init(); //åˆå§‹åŒ–ç¯å¢ƒ
     commandDone = 0;
     
-    printf("yourname@computer:%s$ ", get_current_dir_name()); //´òÓ¡ÌáÊ¾·ûĞÅÏ¢
+    printf("yourname@computer:%s$ ", get_current_dir_name()); //æ‰“å°æç¤ºç¬¦ä¿¡æ¯
 
     while(1){
         i = 0;
-        while((c = getchar()) != '\n'){ //¶ÁÈëÒ»ĞĞÃüÁî
+        while((c = getchar()) != '\n'){ //è¯»å…¥ä¸€è¡Œå‘½ä»¤
             inputBuff[i++] = c;
         }
         inputBuff[i] = '\0';
@@ -113,14 +71,14 @@ int main(int argc, char** argv) {
         len = i;
         offset = 0;
         
-        yyparse(); //µ÷ÓÃÓï·¨·ÖÎöº¯Êı£¬¸Ãº¯ÊıÓÉyylex()Ìá¹©µ±Ç°ÊäÈëµÄµ¥´Ê·ûºÅ
+        yyparse(); //è°ƒç”¨è¯­æ³•åˆ†æå‡½æ•°ï¼Œè¯¥å‡½æ•°ç”±yylex()æä¾›å½“å‰è¾“å…¥çš„å•è¯ç¬¦å·
 
-        if(commandDone == 1){ //ÃüÁîÒÑ¾­Ö´ĞĞÍê³Éºó£¬Ìí¼ÓÀúÊ·¼ÇÂ¼ĞÅÏ¢
+        if(commandDone == 1){ //å‘½ä»¤å·²ç»æ‰§è¡Œå®Œæˆåï¼Œæ·»åŠ å†å²è®°å½•ä¿¡æ¯
             commandDone = 0;
             addHistory(inputBuff);
         }
         
-        printf("yourname@computer:%s$ ", get_current_dir_name()); //´òÓ¡ÌáÊ¾·ûĞÅÏ¢
+        printf("yourname@computer:%s$ ", get_current_dir_name()); //æ‰“å°æç¤ºç¬¦ä¿¡æ¯
      }
 
     return (EXIT_SUCCESS);
