@@ -413,7 +413,7 @@ SimpleCmd* handleSimpleCmdStr(int begin, int end){
                 if(j!=0){
                     temp[j] = '\0';
                     j = 0;
-                    if(!filefinished){
+                    if(!fileFinished){
                         k++;
                         temp = buff[k];
                     }
