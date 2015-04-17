@@ -333,7 +333,7 @@ SimpleCmd* handleSimpleCmdStr(int begin, int end){
 	//默认为非后台命令，输入输出重定向为null
     cmd->isBack = 0;
     cmd->input = cmd->output = NULL;
-    
+    cmd->nextCmd = NULL;//管道指令为null
     //初始化相应变量
     for(i = begin; i<10; i++){
         buff[i][0] = '\0';
