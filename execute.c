@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <stddef.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -727,6 +728,121 @@ int pipe_cmd (SimpleCmd *cmd1,SimpleCmd *cmd2)
 }
 
 /*******************************************************
+                    find * and ?
+********************************************************/
+int findWildcard (SimpleCmd *cmd) {
+	int i,j;
+	char *temp = (char*)malloc(sizeof(char)*256);
+	for (i = 0; cmd->args[i] != NULL ;i++) {
+		temp = cmd->args[i];
+		for (j = 0; temp[j]!='\0'; j++) {
+			if (temp[j] == '*' || temp[j] == '?') {
+				return i;
+			}
+		}
+	}
+	return 0;
+}
+
+/*******************************************************
+                     matches
+********************************************************/
+int matches(char *str1, char *pattern) {
+	int len1 = strlen(str1);
+	int len2 = strlen(pattern);
+	int mark = -1;
+    int p1 = 0, p2 = 0;
+    while (p1<len1 && p2<len2) {
+		if (pattern[p2] == '?') {
+			p1++;
+			p2++;
+			continue;
+		}
+		else if (pattern[p2] == '*') {
+			p2++;
+			mark = p2;
+			continue;
+		}
+		else if (str1[p1] != pattern[p2]) {
+			if (p1 == 0 && p2 == 0) {
+				return 0;
+			}
+			else {
+				if (mark!=-1) {
+				p1 -= p2 - mark - 1;
+				p2 = mark;
+				continue;
+				}
+				else return 0;
+			}
+		}
+		else {
+			p1++;
+			p2++;
+		}
+	}
+	if (p2 == len2) {
+		if (p1 == len1) {
+			return 1;
+		}
+		else if (pattern[p2 - 1] == '*') {
+			return 1;
+		}
+		else return 0;
+	}
+    while (p2<len2) {
+        if (pattern[p2] != '*')
+			return 0;
+		p2++;
+	}
+	return 1;
+}
+
+/*******************************************************
+                     * and ? command
+********************************************************/
+void execComplexCmd(SimpleCmd *cmd, int b){
+	DIR *dp;
+        struct dirent *dirp;
+	SimpleCmd *cmdtemp;
+	int i;
+	char *name = (char*)malloc(sizeof(get_current_dir_name()));
+	name = get_current_dir_name();
+	dp = opendir(name);
+	while((dirp = readdir(dp)) != NULL) {
+		if (matches(dirp->d_name, cmd->args[b]) == 1) {
+			if (dirp->d_name =="." ||dirp->d_name == ".." || dirp->d_name[0]=='.')
+				continue;
+			cmdtemp = (SimpleCmd*)malloc(sizeof(SimpleCmd));
+			cmdtemp->args = (char**)malloc(sizeof(cmd->args));
+
+        		cmdtemp->input = (char*)malloc(sizeof( cmd->input));
+        		cmdtemp->output = (char*)malloc(sizeof( cmd->output));		
+
+		for (i = 0; cmd->args[i] != NULL ;i++) {
+			cmdtemp->args[i] = (char*)malloc(sizeof(cmd->args[i]));   
+			strcpy(cmdtemp->args[i],cmd->args[i]);
+		}
+		cmdtemp->args[i] = (char*)malloc(sizeof(cmd->args[i]));   
+		cmdtemp->args[i] = NULL;
+
+		strcpy(cmdtemp->args[b],dirp->d_name);
+		if (cmd->input!=NULL)
+			strcpy(cmdtemp->input,cmd->input);
+		else cmdtemp->input=NULL;
+		if (cmd->output!=NULL)
+			strcpy(cmdtemp->output,cmd->output);
+		else cmdtemp->output=NULL;
+
+		cmdtemp->isBack = cmd->isBack;
+
+		execSimpleCmd(cmdtemp);
+		} 
+	}
+	closedir(dp);
+}
+
+/*******************************************************
                      命令执行接口
 ********************************************************/
 void execute(){
@@ -734,22 +850,25 @@ void execute(){
     #ifdef DEBUG
     SimpleCmd *pcmd;
     #endif
-    
+    int b;
     cmd = handleSimpleCmdStr(0, strlen(inputBuff));
-    if(cmd->nextCmd!=NULL){
-    #ifdef DEBUG
-        pcmd=cmd;
-        do{
-            printf("%s\n",pcmd->args[0]);
-            pcmd=pcmd->nextCmd;
-        }while(pcmd!=NULL);
-    #endif
+
+    b = findWildcard(cmd);
+    if (b == 0) {
+	if(cmd->nextCmd!=NULL){
+        #ifdef DEBUG
+           pcmd=cmd;
+        #endif
         if(pipe_cmd(cmd,cmd->nextCmd)){
             printf("pipe error\n");
         }
         free(cmd->nextCmd);
+        }
+        else{
+           execSimpleCmd(cmd);
+        }
     }
-    else{
-        execSimpleCmd(cmd);
+    else {
+        execComplexCmd(cmd,b);	
     }
 }
