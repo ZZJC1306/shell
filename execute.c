@@ -215,7 +215,7 @@ void ctrl_C(){
     fgPid = 0;
     
         //删除当前作业
-    	now = now->next;
+    	//now = now->next;
 
        
 }
@@ -663,7 +663,7 @@ int pipe_cmd (SimpleCmd *cmd1,SimpleCmd *cmd2)
     int status;
     int pid[2];
     int pipe_fd[2];
-
+    int b;
     
     //建立管道
     if(pipe(pipe_fd) < 0)
@@ -686,7 +686,13 @@ int pipe_cmd (SimpleCmd *cmd1,SimpleCmd *cmd2)
         dup2(pipe_fd[1],1);
         close(pipe_fd[1]);
         //执行命令
-        execSimpleCmd(cmd1);
+        b = findWildcard(cmd1);
+        if (b == 0) {
+             execSimpleCmd(cmd1);
+           }
+           else {
+             execComplexCmd(cmd1,b);
+           }
         exit(0);
     }
 
@@ -713,7 +719,13 @@ int pipe_cmd (SimpleCmd *cmd1,SimpleCmd *cmd2)
                 free(cmd2->nextCmd);
             }
             else{
-                execSimpleCmd(cmd2);
+                b = findWildcard(cmd2);
+                if (b == 0) {
+                  execSimpleCmd(cmd2);
+                }
+                else {
+                  execComplexCmd(cmd2,b);
+                }  
             }
             exit(0);
 
@@ -854,21 +866,23 @@ void execute(){
     cmd = handleSimpleCmdStr(0, strlen(inputBuff));
 
     b = findWildcard(cmd);
-    if (b == 0) {
+
 	if(cmd->nextCmd!=NULL){
         #ifdef DEBUG
            pcmd=cmd;
         #endif
-        if(pipe_cmd(cmd,cmd->nextCmd)){
-            printf("pipe error\n");
-        }
-        free(cmd->nextCmd);
+           if(pipe_cmd(cmd,cmd->nextCmd)){
+             printf("pipe error\n");
+           }
+           free(cmd->nextCmd);
         }
         else{
-           execSimpleCmd(cmd);
+           if (b == 0) {
+             execSimpleCmd(cmd);
+           }
+           else {
+             execComplexCmd(cmd,b);
+           }
         }
-    }
-    else {
-        execComplexCmd(cmd,b);	
-    }
+    
 }
